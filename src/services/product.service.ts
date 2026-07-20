@@ -40,46 +40,43 @@ export function toPublicProduct(product: IProduct): PublicProduct {
 }
 
 export async function seedProductsIfNeeded(): Promise<void> {
-  const count = await Product.countDocuments();
-  if (count > 0) {
-    logger.info("Products collection already seeded", { count });
-    // Keep images/content in sync for the known seed product without resetting stock.
-    for (const seed of seedProducts) {
-      await Product.updateOne(
-        { id: seed.id },
-        {
-          $set: {
-            title: seed.title,
-            slug: seed.slug,
-            images: seed.images,
-            price: seed.price,
-            description: seed.description,
-            shortDescription: seed.shortDescription,
-            details: seed.details,
-            faqs: seed.faqs,
-            reviews: seed.reviews,
-            isActive: true,
-          },
-          $setOnInsert: {
-            quantity: seed.quantity,
-          },
+  for (const seed of seedProducts) {
+    const result = await Product.updateOne(
+      { id: seed.id },
+      {
+        $set: {
+          title: seed.title,
+          slug: seed.slug,
+          images: seed.images,
+          price: seed.price,
+          description: seed.description,
+          shortDescription: seed.shortDescription,
+          details: seed.details,
+          faqs: seed.faqs,
+          reviews: seed.reviews,
+          isActive: true,
         },
-        { upsert: true }
-      );
+        $setOnInsert: {
+          id: seed.id,
+          quantity: seed.quantity,
+        },
+      },
+      { upsert: true }
+    );
+
+    if (result.upsertedCount > 0) {
+      logger.info("Seeded product", {
+        productId: seed.id,
+        slug: seed.slug,
+        quantity: seed.quantity,
+      });
+    } else {
+      logger.info("Synced product catalog fields", {
+        productId: seed.id,
+        slug: seed.slug,
+      });
     }
-    return;
   }
-
-  await Product.insertMany(
-    seedProducts.map((product) => ({
-      ...product,
-      isActive: true,
-    }))
-  );
-
-  logger.info("Seeded products collection", {
-    count: seedProducts.length,
-  });
 }
 
 export async function listActiveProducts(): Promise<PublicProduct[]> {

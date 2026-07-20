@@ -25,8 +25,8 @@ export type SeedProduct = {
  * https://drive.google.com/file/d/1LhSLHKeYq6pKGp_3bszcL5do7CGnBGAb/view
  */
 const CREWNECK_IMAGES = [
-  "https://drive.google.com/uc?export=view&id=1eYktV6d6JlAlfLdagFPeCBm_XhnFum1K",
-  "https://drive.google.com/uc?export=view&id=1LhSLHKeYq6pKGp_3bszcL5do7CGnBGAb",
+  "https://lh3.googleusercontent.com/d/1eYktV6d6JlAlfLdagFPeCBm_XhnFum1K",
+  "https://lh3.googleusercontent.com/d/1LhSLHKeYq6pKGp_3bszcL5do7CGnBGAb",
 ];
 
 export const seedProducts: SeedProduct[] = [
