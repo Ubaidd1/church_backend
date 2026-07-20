@@ -82,6 +82,56 @@ export async function findOrderBySessionId(
   return Order.findOne({ stripeSessionId });
 }
 
+export type PublicOrder = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  products: OrderProductLine[];
+  subtotal: number;
+  shippingFee: number;
+  totalAmount: number;
+  currency: string;
+  stripeSessionId: string;
+  stripePaymentIntentId?: string;
+  paymentStatus: string;
+  orderStatus: string;
+  createdAt: string;
+};
+
+export function toPublicOrder(order: IOrder): PublicOrder {
+  return {
+    id: String(order._id),
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    products: order.products.map((line) => ({
+      productId: line.productId,
+      productName: line.productName,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      subtotal: line.subtotal,
+    })),
+    subtotal: order.subtotal,
+    shippingFee: order.shippingFee,
+    totalAmount: order.totalAmount,
+    currency: order.currency,
+    stripeSessionId: order.stripeSessionId,
+    stripePaymentIntentId: order.stripePaymentIntentId,
+    paymentStatus: order.paymentStatus,
+    orderStatus: order.orderStatus,
+    createdAt: order.createdAt.toISOString(),
+  };
+}
+
+export async function getPublicOrderBySessionId(
+  stripeSessionId: string
+): Promise<PublicOrder | null> {
+  const order = await findOrderBySessionId(stripeSessionId);
+  if (!order) {
+    return null;
+  }
+  return toPublicOrder(order);
+}
+
 export async function createPaidOrder(
   input: CreatePaidOrderInput
 ): Promise<IOrder> {

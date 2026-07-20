@@ -56,6 +56,46 @@ export async function createCheckoutSession(
   }
 }
 
+export async function getOrderBySession(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const sessionId = String(req.params.sessionId || "").trim();
+
+    if (!sessionId || !sessionId.startsWith("cs_")) {
+      throw new AppError("Valid Stripe session ID is required", 400);
+    }
+
+    logger.info("Fetching order by session", { sessionId });
+
+    const order = await orderService.getPublicOrderBySessionId(sessionId);
+
+    if (!order) {
+      logger.warn("Order not found for session yet", { sessionId });
+      res.status(404).json({
+        success: false,
+        message: "Order not found yet. Payment may still be processing.",
+      });
+      return;
+    }
+
+    logger.info("Order found for session", {
+      sessionId,
+      orderId: order.id,
+      totalAmount: order.totalAmount,
+    });
+
+    res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function handleStripeWebhook(
   req: Request,
   res: Response,
