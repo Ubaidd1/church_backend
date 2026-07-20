@@ -3,6 +3,7 @@ import { validationResult } from "express-validator";
 import { AppError } from "../utils/helpers";
 import * as stripeService from "../services/stripe.service";
 import * as orderService from "../services/order.service";
+import * as productService from "../services/product.service";
 import { logger, webhookSecretPreview } from "../utils/logger";
 import { env } from "../config/env";
 
@@ -237,7 +238,7 @@ async function persistPaidOrderFromSession(
     currency: parsed.currency,
   });
 
-  const order = await orderService.createPaidOrder({
+  const { order, created } = await orderService.createPaidOrder({
     customerName: parsed.customerName,
     customerEmail: parsed.customerEmail,
     products: parsed.products,
@@ -249,6 +250,15 @@ async function persistPaidOrderFromSession(
     stripePaymentIntentId: paymentIntentId,
   });
 
+  if (created) {
+    await productService.decrementStockForOrder(
+      parsed.products.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+      }))
+    );
+  }
+
   logger.info("Order saved from webhook", {
     orderId: String(order._id),
     sessionId: session.id,
@@ -256,5 +266,6 @@ async function persistPaidOrderFromSession(
     totalAmount: order.totalAmount,
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
+    stockDecremented: created,
   });
 }

@@ -1,12 +1,14 @@
 import { createApp } from "./app";
 import { connectDatabase } from "./config/database";
 import { assertEnvReady, env } from "./config/env";
+import { seedProductsIfNeeded } from "./services/product.service";
 import { logger, webhookSecretPreview } from "./utils/logger";
 
 async function bootstrap(): Promise<void> {
   assertEnvReady();
 
   await connectDatabase();
+  await seedProductsIfNeeded();
 
   const app = createApp();
 

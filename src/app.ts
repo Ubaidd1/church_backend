@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { env } from "./config/env";
 import paymentRoutes from "./routes/payment.routes";
+import productRoutes from "./routes/product.routes";
 import webhookRoutes from "./routes/webhook.routes";
 import {
   errorHandler,
@@ -53,6 +54,7 @@ export function createApp(): Application {
   });
 
   app.use("/api/payment", paymentRoutes);
+  app.use("/api/products", productRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
@@ -60,6 +62,7 @@ export function createApp(): Application {
   logger.info("Express app configured", {
     webhookPath: "POST /stripe/webhook",
     paymentPath: "/api/payment",
+    productsPath: "/api/products",
     frontendUrl: env.frontendUrl,
   });
 

@@ -1,5 +1,4 @@
 import { env } from "../config/env";
-import { getCatalogProductById } from "../data/products";
 import type {
   CartItemInput,
   OrderProductLine,
@@ -7,8 +6,9 @@ import type {
 } from "../types/order.types";
 import { AppError, roundMoney } from "../utils/helpers";
 import { Order, type IOrder } from "../models/Order";
+import * as productService from "./product.service";
 
-export function priceCart(cartItems: CartItemInput[]): PricedCart {
+export async function priceCart(cartItems: CartItemInput[]): Promise<PricedCart> {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new AppError("Cart must contain at least one item", 400);
   }
@@ -18,7 +18,10 @@ export function priceCart(cartItems: CartItemInput[]): PricedCart {
   for (const item of cartItems) {
     const quantity = Number(item.quantity);
     if (!item.productId || !Number.isInteger(quantity) || quantity < 1) {
-      throw new AppError("Each cart item needs a valid productId and quantity", 400);
+      throw new AppError(
+        "Each cart item needs a valid productId and quantity",
+        400
+      );
     }
     merged.set(item.productId, (merged.get(item.productId) ?? 0) + quantity);
   }
@@ -26,23 +29,17 @@ export function priceCart(cartItems: CartItemInput[]): PricedCart {
   const products: OrderProductLine[] = [];
 
   for (const [productId, quantity] of merged.entries()) {
-    const catalogProduct = getCatalogProductById(productId);
-    if (!catalogProduct) {
-      throw new AppError(`Unknown product: ${productId}`, 400);
-    }
-    if (quantity > catalogProduct.stock) {
-      throw new AppError(
-        `Insufficient stock for ${catalogProduct.name}. Available: ${catalogProduct.stock}`,
-        400
-      );
-    }
+    const catalogProduct = await productService.assertStockAvailable(
+      productId,
+      quantity
+    );
 
-    const unitPrice = roundMoney(catalogProduct.unitPrice);
+    const unitPrice = roundMoney(catalogProduct.price);
     const subtotal = roundMoney(unitPrice * quantity);
 
     products.push({
       productId: catalogProduct.id,
-      productName: catalogProduct.name,
+      productName: catalogProduct.title,
       quantity,
       unitPrice,
       subtotal,
@@ -132,16 +129,21 @@ export async function getPublicOrderBySessionId(
   return toPublicOrder(order);
 }
 
+export type CreatePaidOrderResult = {
+  order: IOrder;
+  created: boolean;
+};
+
 export async function createPaidOrder(
   input: CreatePaidOrderInput
-): Promise<IOrder> {
+): Promise<CreatePaidOrderResult> {
   const existing = await findOrderBySessionId(input.stripeSessionId);
   if (existing) {
-    return existing;
+    return { order: existing, created: false };
   }
 
   try {
-    return await Order.create({
+    const order = await Order.create({
       customerName: input.customerName,
       customerEmail: input.customerEmail.toLowerCase(),
       products: input.products,
@@ -154,8 +156,9 @@ export async function createPaidOrder(
       paymentStatus: "paid",
       orderStatus: "paid",
     });
+
+    return { order, created: true };
   } catch (error: unknown) {
-    // Handle concurrent webhook deliveries for the same session.
     if (
       typeof error === "object" &&
       error !== null &&
@@ -164,7 +167,7 @@ export async function createPaidOrder(
     ) {
       const duplicate = await findOrderBySessionId(input.stripeSessionId);
       if (duplicate) {
-        return duplicate;
+        return { order: duplicate, created: false };
       }
     }
     throw error;

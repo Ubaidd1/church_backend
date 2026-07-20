@@ -29,7 +29,7 @@ function serializeCartForMetadata(pricedCart: PricedCart): string {
 export async function createCheckoutSession(
   input: CreateCheckoutSessionInput
 ): Promise<{ checkoutUrl: string; sessionId: string }> {
-  const pricedCart = priceCart(input.cartItems);
+  const pricedCart = await priceCart(input.cartItems);
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
     pricedCart.products.map((line) => ({
