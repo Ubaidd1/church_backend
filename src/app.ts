@@ -20,7 +20,7 @@ export function createApp(): Application {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.frontendUrl,
+      origin: env.corsOrigins,
       methods: ["GET", "POST", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "Stripe-Signature"],
     })
@@ -64,6 +64,7 @@ export function createApp(): Application {
     paymentPath: "/api/payment",
     productsPath: "/api/products",
     frontendUrl: env.frontendUrl,
+    corsOrigins: env.corsOrigins,
   });
 
   return app;
