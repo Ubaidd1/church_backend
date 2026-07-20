@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/helpers";
+import { logger } from "../utils/logger";
 
 export function notFoundHandler(
   _req: Request,
@@ -11,11 +12,19 @@ export function notFoundHandler(
 
 export function errorHandler(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
   if (err instanceof AppError) {
+    logger.warn("Request failed", {
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: err.statusCode,
+      message: err.message,
+      details: err.details,
+    });
+
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
@@ -24,7 +33,12 @@ export function errorHandler(
     return;
   }
 
-  console.error("Unhandled error:", err);
+  logger.error("Unhandled error", {
+    method: req.method,
+    path: req.originalUrl,
+    message: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  });
 
   const message =
     err instanceof Error ? err.message : "Internal server error";

@@ -108,7 +108,7 @@ export function constructWebhookEvent(
     return stripe.webhooks.constructEvent(
       payload,
       signature,
-      env.stripeWebhookSecret
+      env.stripeWebhookSecret.trim()
     );
   } catch (error) {
     const message =
